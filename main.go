@@ -10,7 +10,15 @@ import (
 
 var (
 	region = "eu-west-1"
+	queue  = ""
 )
+
+type Message struct {
+	Body          string
+	MD5           string
+	MessageId     string
+	ReceiptHandle string
+}
 
 func main() {
 
