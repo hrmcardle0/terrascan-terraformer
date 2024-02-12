@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "./proto";
+
+// The event service definition
+service EventEmitter {
+  // Sends a greeting
+  rpc SendEvent (MessageRequest) returns (MessageResponse) {}
+}
+
+message MessageRequest {
+  string event = 1;
+}
+
+message MessageResponse {
+  string response = 1;
+}

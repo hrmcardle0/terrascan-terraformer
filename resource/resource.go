@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+var (
+	region = "eu-west-1"
+)
+
 type Resource struct {
 	Name    string
 	Region  string

@@ -1,16 +1,57 @@
 package cmd
 
 import (
-	"fmt"
+	//"bytes"
+	//"encoding/json"
+	//"fmt"
 	"log"
-	"os/exec"
+	//"net/http"
+	//"os/exec"
 	"strings"
 
+	"gitlab.com/secops/development/aws/terrascan/helpers"
 	"gitlab.com/secops/development/aws/terrascan/resource"
 	"gitlab.com/secops/development/aws/terrascan/terraformer"
 )
 
+var (
+	region = "eu-west-1"
+)
+
 const pathToTerraformer = "/usr/local/bin/terraformer"
+
+func Init(e string) error {
+
+	event, err := helpers.ToJson(e)
+	if err != nil {
+		log.Println("Error parsing json for event: ", e)
+		return err
+	}
+
+	// setup target resource block
+	targetResource := resource.Resource{
+		Name:    strings.Split(event.EventSource, ".amazonaws.com")[0],
+		Region:  region,
+		Filters: "Name=id;Value=" + event.BucketName,
+	}
+
+	/*
+		* Cli Configuration
+		// retreive input variables
+		// resource-name: string of resources in terraformer format, ex...s3,ec2
+		// filters: string representations of filters, ex..vpc=vpc_id1:vpc_id2:vpc_id3
+		flag.StringVar(&targetResource.Name, "resource-name", "None", "Resource Name Flag Set")
+		flag.StringVar(&targetResource.Filters, "filters", "None", "Resource Name Flag Set")
+		flag.Parse()
+	*/
+
+	if err := Setup(&targetResource); err != nil {
+		return err
+	}
+
+	return nil
+
+}
 
 func Setup(resource *resource.Resource) error {
 	log.Printf("Setup function called with resource: %v\n", resource)
@@ -18,39 +59,26 @@ func Setup(resource *resource.Resource) error {
 	// initialize terraform
 	if err := InitTerraform(); err != nil {
 		log.Println("Error Initializing Terraform Provider: %v", err)
+		return err
 	}
 
-	// start terrawatch
+	// start terraformer
 	if err := terraformer.InitTerraformer(resource, pathToTerraformer); err != nil {
 		log.Printf("Error Initializing Terraformer: %v: ", err)
-	}
-
-	return nil
-}
-
-// Initialize terraform provider
-func InitTerraform() error {
-	log.Println("Initializing Terraform Provider")
-
-	// get current directory
-	cmd := exec.Command("pwd")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
 		return err
 	}
 
-	currentDir := string(output)
-	workDir := strings.ReplaceAll(fmt.Sprintf("-chdir=%s/terraform", currentDir), "\n", "")
-
-	// init terraform
-	cmd = exec.Command("terraform", workDir, "init")
-	output, err = cmd.CombinedOutput()
+	// create string with generated terraform
+	terraformString, err := terraformer.GenerateString()
 	if err != nil {
+		log.Printf("Error generating master terraform string: %v: ", err)
 		return err
 	}
 
-	log.Println(string(output))
-
+	// call tfsec endpoint
+	if err = InitHttp(terraformString); err != nil {
+		log.Printf("Error calling HTTP endpoint: %v\n", err)
+		return err
+	}
 	return nil
-
 }
