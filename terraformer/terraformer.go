@@ -27,10 +27,16 @@ func InitTerraformer(resource *resource.Resource, path string) error {
 	log.Println(string(output))
 
 	// run terraformer
-	cliList = resource.ToCliList()
+	cliList, isIam := resource.ToCliList()
 	log.Printf("Running: terraformer %v\n", cliList)
 
-	cmd = exec.Command(fmt.Sprintf("%s", path), cliList...)
+	// if we are running IAM Checks and the source is not the cyber account, run the custom script
+	if isIam {
+		log.Println("IAM is set")
+		cmd = exec.Command("/home/ec2-user/environment/terrascan/iam.sh", resource.Account)
+	} else {
+		cmd = exec.Command(fmt.Sprintf("%s", path), cliList...)
+	}
 	cmd.Dir = "./terraform"
 	output, err = cmd.CombinedOutput()
 	if err != nil {

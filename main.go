@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	//"flag"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net"
@@ -36,11 +37,15 @@ func (s *server) SendEvent(ctx context.Context, in *pb.MessageRequest) (*pb.Mess
 	go func(e string) {
 		defer cancel()
 		if err := cmd.Init(e); err != nil {
-			log.Fatalf("Init() Error: %v\n", err)
+			helpers.Response = base64.StdEncoding.EncodeToString([]byte(err.Error()))
+
+			log.Printf("Init() Error: %v\n", err)
 		}
+		log.Println("Done Init()")
 	}(event)
 	select {
 	case <-ctx.Done():
+		log.Println("Done()")
 		return &pb.MessageResponse{
 			Response: helpers.Response,
 		}, nil

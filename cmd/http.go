@@ -51,7 +51,7 @@ func InitHttp(terraformString string) error {
 	}
 
 	// Print the response
-	log.Println("Response:", result)
+	//log.Println("Response:", result)
 	helpers.Response = result
 
 	return nil

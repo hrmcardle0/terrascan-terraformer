@@ -4,10 +4,12 @@ import (
 	//"bytes"
 	//"encoding/json"
 	//"fmt"
+	//"errors"
+	//"encoding/base64"
 	"log"
 	//"net/http"
 	//"os/exec"
-	"strings"
+	//"strings"
 
 	"gitlab.com/secops/development/aws/terrascan/helpers"
 	"gitlab.com/secops/development/aws/terrascan/resource"
@@ -23,16 +25,21 @@ const pathToTerraformer = "/usr/local/bin/terraformer"
 func Init(e string) error {
 
 	event, err := helpers.ToJson(e)
-	if err != nil {
+	if err != nil && err.Error() != "Error code found in event" {
 		log.Println("Error parsing json for event: ", e)
+		return err
+	}
+	if err != nil && err.Error() == "Error code found in event" {
+		log.Println("Error code found. Ignoring")
 		return err
 	}
 
 	// setup target resource block
 	targetResource := resource.Resource{
-		Name:    strings.Split(event.EventSource, ".amazonaws.com")[0],
+		Name:    event.Source,
 		Region:  region,
-		Filters: "Name=id;Value=" + event.BucketName,
+		Filters: "None",
+		Account: event.Account,
 	}
 
 	/*
